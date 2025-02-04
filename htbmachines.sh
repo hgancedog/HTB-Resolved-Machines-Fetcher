@@ -24,11 +24,13 @@ trap 'handleError $LINENO $BASH_COMMAND' ERR
 
 print_help_menu() {
     echo -e "\n\t${YELLOW}[+]${ENDCOLOR}${GRAY} Please, select an option:"
-    echo -e "\t\th) Display this help panel"
     echo -e "\t\tu) Dowload or update files"
     echo -e "\t\tm) Search by machine name"
-    echo -e "\t\ti) Search by IP"
-
+    echo -e "\t\ti) Search by IP address"
+    echo -e "\t\to) Search by Operating System"
+    echo -e "\t\td) Search by difficulty"
+    echo -e "\t\th) Display this help panel"
+    echo -e "\n"
     return 0
 }
 
@@ -77,7 +79,7 @@ check_files() {
 
 search_machine_name() {
     machine_name="name: \"$1\""
-    find_machine="$(grep -i "${machine_name}" -A 9 bundle.js | grep -vE 'id:|sku:|like:|bufferOverFlow:|resuelta:|activeDirectory:'| sed 's/^[ \t]*//' | fmt -t | awk '{print "\t" $0}' | sed '/,$/s/,$//')"
+    find_machine="$(grep -i "${machine_name}" -A 8 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:' | sed 's/^[ \t]*//' | fmt -t | awk '{print "\t" $0}' | sed '/,$/s/,$//')"
 
     if [ ! "${find_machine}" ]; then
         echo -e "\n\t${RED}[!][!][!]  Machine $1 doesn´t exists in the database  [!][!][!]\n" >&2
@@ -90,8 +92,7 @@ search_machine_name() {
 
 search_ip() {
     ip="ip: \"$1\""
-    find_ip="$(grep "${ip}" -B 3 -A 6 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|--' | sed 's/^[ \t]*//' | sed '/,$/s/,$//'| fmt -t | awk '{print "\t" $0}')"
-
+    find_ip="$(grep "${ip}" -B 3 -A 7 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|--|\}\), lf\.push\(\{' | sed 's/^[ \t]*//' | sed '/,$/s/,$//'| fmt -t | awk '{print "\t" $0}')"
 
     if [ ! "${find_ip}" ]; then
         echo -e "\n\t${RED}[!][!][!]  IP $1 doesn´t exists in the database  [!][!][!]\n" >&2
@@ -102,11 +103,42 @@ search_ip() {
     return 0
 }
 
+search_os() {
+    os="so: \"$1\""
+    find_os="$(grep -i "${os}" -B 4 -A 5 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:|\}\), lf\.push\(\{' | sed 's/^[ \t]*//' | sed '/,$/s/,$//' | fmt -t | awk '{print "\t" $0}')"
+
+    if [ ! "${find_os}" ]; then
+        echo -e "\n\t${RED}[!][!][!]  OS $1 doesn´t exists in the database  [!][!][!]\n" >&2
+        print_help_menu
+    fi
+
+    echo -e "\n${find_os}\n"
+    return 0
+}
+
+search_difficulty() {
+    difficulty="dificultad: \"$1\""
+    find_difficulty="$(grep -i "${difficulty}" -B 5 -A 5 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:|\}\), lf\.push\(\{' | sed 's/^[ \t]*//' | sed '/,$/s/,$//' | fmt -t | awk '{print "\t" $0}')"
+
+    if [ ! "${find_difficulty}" ]; then
+        echo -e "\n\t${RED}[!][!][!]  There are no machines of $1 difficulty  [!][!][!]\n" >&2
+        print_help_menu
+    fi
+
+    echo -e "\n${find_difficulty}\n"
+    return 0
+}
+
 OPTIND=1;
-while getopts ":hum:i:" opt; do
+while getopts ":hum:i:o:d:" opt; do
     case ${opt} in
         h)
             print_help_menu
+
+            if [ $OPTIND -ge 2 ] ; then
+                shift
+                echo -e "\n${RED}[!][!][!]  Unexpected arguments: $* in option -${opt} [!][!][!]${ENDCOLOR}\n" >&2
+            fi
             ;;
         u)
             check_files
@@ -116,6 +148,13 @@ while getopts ":hum:i:" opt; do
             ;;
         i)
             search_ip "$OPTARG"
+            ;;
+        o)
+            search_os "$OPTARG"
+
+            ;;
+        d)
+            search_difficulty "$OPTARG"
             ;;
         :)
             echo -e "\n${RED}[!][!][!]  Option -${OPTARG} require an argument  [!][!][!]${ENDCOLOR}\n" >&2
@@ -135,7 +174,12 @@ if [ $OPTIND -le 1 ]; then
     print_help_menu
 fi
 
-#to handle arguments safely with $1, $n, etc.
+# to handle arguments safely with $1, $n, etc.
 shift $((OPTIND-1))
+
+# function for handling unknown arguments. At this point $1, $n are arguments
+if [ $# -ge 1 ]; then
+    echo -e "\n${RED}[!][!][!]  Unexpected arguments: $*  [!][!][!]${ENDCOLOR}\n" >&2
+fi
 
 unset $file $old_file
