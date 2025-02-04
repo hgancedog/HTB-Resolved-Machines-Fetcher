@@ -23,10 +23,12 @@ handleError() {
 trap 'handleError $LINENO $BASH_COMMAND' ERR
 
 print_help_menu() {
-    echo -e "\n\t${YELLOW}[+]${ENDCOLOR}${GRAY} Uso:"
+    echo -e "\n\t${YELLOW}[+]${ENDCOLOR}${GRAY} Please, select an option:"
     echo -e "\t\th) Display this help panel"
     echo -e "\t\tu) Dowload or update files"
- 
+    echo -e "\t\tm) Search by machine name"
+    echo -e "\t\ti) Search by IP"
+
     return 0
 }
 
@@ -73,8 +75,35 @@ check_files() {
     return 0
 }
 
+search_machine_name() {
+    machine_name="name: \"$1\""
+    find_machine="$(grep -i "${machine_name}" -A 9 bundle.js | grep -vE 'id:|sku:|like:|bufferOverFlow:|resuelta:|activeDirectory:'| sed 's/^[ \t]*//' | fmt -t | awk '{print "\t" $0}' | sed '/,$/s/,$//')"
+
+    if [ ! "${find_machine}" ]; then
+        echo -e "\n\t${RED}[!][!][!]  Machine $1 doesn´t exists in the database  [!][!][!]\n" >&2
+        print_help_menu
+    fi
+
+    echo -e "\n${find_machine}\n"
+    return 0
+}
+
+search_ip() {
+    ip="ip: \"$1\""
+    find_ip="$(grep "${ip}" -B 3 -A 6 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|--' | sed 's/^[ \t]*//' | sed '/,$/s/,$//'| fmt -t | awk '{print "\t" $0}')"
+
+
+    if [ ! "${find_ip}" ]; then
+        echo -e "\n\t${RED}[!][!][!]  IP $1 doesn´t exists in the database  [!][!][!]\n" >&2
+        print_help_menu
+    fi
+
+    echo -e "\n${find_ip}\n"
+    return 0
+}
+
 OPTIND=1;
-while getopts "hu" opt; do
+while getopts ":hum:i:" opt; do
     case ${opt} in
         h)
             print_help_menu
@@ -82,15 +111,30 @@ while getopts "hu" opt; do
         u)
             check_files
             ;;
-       # h)
-        #    print_help_menu
-         #   ;;
-
+        m)
+            search_machine_name "$OPTARG"
+            ;;
+        i)
+            search_ip "$OPTARG"
+            ;;
+        :)
+            echo -e "\n${RED}[!][!][!]  Option -${OPTARG} require an argument  [!][!][!]${ENDCOLOR}\n" >&2
+            print_help_menu
+            exit 1
+            ;;
         \?)
-            echo -e "${RED}\n[!][!][!]Unknown option selected. Please choose a valid option[!][!][!]\n${ENDCOLOR}" >&2;
+            echo -e "${RED}\n[!][!][!]  Unknown option selected. Please choose a valid option  [!][!][!]\n${ENDCOLOR}" >&2
+            print_help_menu
+            exit 1
             ;;
     esac
-done  
+done
+
+if [ $OPTIND -le 1 ]; then
+    echo -e "\n${RED}[!][!][!]  You must enter an option  [!][!][!]${ENDCOLOR}\n" >&2
+    print_help_menu
+fi
+
 #to handle arguments safely with $1, $n, etc.
 shift $((OPTIND-1))
 

@@ -19,28 +19,28 @@ To run the script, make sure you have bash installed and execute the following c
 bash
 ./htb_machine_fetcher.sh
 
-# Download/Update Files
+## Download/Update Files
 ./htb_machine_fetcher.sh -u
 
-# Search by Machine Name
+## Search by Machine Name
 ./htb_machine_fetcher.sh -m <machine_name>
 
-# Search by IP Address
+## Search by IP Address
 ./htb_machine_fetcher.sh -i <ip_address>
 
-# Search by Difficulty
+## Search by Difficulty
 ./htb_machine_fetcher.sh -d <difficulty>
 
-# Search by Operating System
+## Search by Operating System
 ./htb_machine_fetcher.sh -o <operating_system>
 
-# Search by Skill
+## Search by Skill
 ./htb_machine_fetcher.sh -s <skill>
 
-# Show YouTube Resolution Link
+## Show YouTube Resolution Link
 ./htb_machine_fetcher.sh -y <machine_name>
 
-# Show Help Panel
+## Show Help Panel
 ./htb_machine_fetcher.sh -h
 
 ## Gratitude
