@@ -24,12 +24,14 @@ trap 'handleError $LINENO $BASH_COMMAND' ERR
 
 print_help_menu() {
     echo -e "\n\t${YELLOW}[+]${ENDCOLOR}${GRAY} Please, select an option:"
-    echo -e "\t\tu) Dowload or update files"
-    echo -e "\t\tm) Search by machine name"
-    echo -e "\t\ti) Search by IP address"
-    echo -e "\t\to) Search by Operating System"
-    echo -e "\t\td) Search by difficulty"
-    echo -e "\t\th) Display this help panel"
+    echo -e "\t\tu) Dowload Or Update Files"
+    echo -e "\t\tm) Search By Machine Name"
+    echo -e "\t\ti) Search By IP address"
+    echo -e "\t\to) Search By Operating System"
+    echo -e "\t\td) Search By Difficulty"
+    echo -e "\t\ts) Search By Skill"
+    echo -e "\t\ty) Get Youtube Link"
+    echo -e "\t\th) Display This Help Panel${ENDCOLOR}"
     echo -e "\n"
     return 0
 }
@@ -51,14 +53,14 @@ update_files() {
     hash="$(md5sum "${file}" | awk '{print $1}')"
     old_hash="$(md5sum "${old_file}" | awk '{print $1}')"
 
-    echo -e "\n${hash}"
-    echo -e "\n${old_hash}"
+    echo -e "\n${MAGENTA}New File Hash:${ENDCOLOR} ${hash}"
+    echo -e "\n${MAGENTA}Old File Hash:${ENDCOLOR} ${old_hash}"
 
     if [ "${old_hash}" != "${hash}" ]; then
-        echo -e "\n${BLUE}[-]Files has been uptdated[-]\n${ENDCOLOR}"
+        echo -e "\n${WHITE}[+][+][+]  Files has been updated  [+][+][+]\n${ENDCOLOR}"
         rm -f "${old_file}"
     else
-        echo -e "\n${BLUE}[-]Files are already up to date[-]\n${ENDCOLOR}"
+        echo -e "\n${CYAN}[+][+][+]  Files are already up to date  [+][+][+]\n${ENDCOLOR}"
         rm -f "${old_file}"
     fi
 
@@ -68,7 +70,7 @@ update_files() {
 check_files() {
     if [ ! -f bundle.js ]; then
         download_files
-        echo -e "\nFiles downloaded!!!"
+        echo -e "\n${WHITE}[+][+][+]  Files downloaded!!!  [+][+][+]\n${ENDCOLOR}"
     else
         mv "${file}" "${old_file}"
         download_files
@@ -129,15 +131,21 @@ search_difficulty() {
     return 0
 }
 
+search_skill() {
+    skill="$1"
+    echo -e "\n probando search_skill ${skill}"
+}
+
 OPTIND=1;
-while getopts ":hum:i:o:d:" opt; do
+while getopts ":hum:i:o:d:s:" opt; do
     case ${opt} in
         h)
             print_help_menu
 
             if [ $OPTIND -ge 2 ] ; then
-                shift
-                echo -e "\n${RED}[!][!][!]  Unexpected arguments: $* in option -${opt} [!][!][!]${ENDCOLOR}\n" >&2
+                echo -e "\n    Otra forma de imprimir argumentos no esperados: ${!OPTIND}"
+                shift $((OPTIND-1))
+                echo -e "\n${MAGENTA}[!][!][!]  Unexpected arguments: $* in option -${opt} [!][!][!]${ENDCOLOR}\n" >&2
             fi
             ;;
         u)
@@ -156,6 +164,9 @@ while getopts ":hum:i:o:d:" opt; do
         d)
             search_difficulty "$OPTARG"
             ;;
+        s)
+            search_skill "$OPTARG"
+            ;;
         :)
             echo -e "\n${RED}[!][!][!]  Option -${OPTARG} require an argument  [!][!][!]${ENDCOLOR}\n" >&2
             print_help_menu
@@ -170,7 +181,7 @@ while getopts ":hum:i:o:d:" opt; do
 done
 
 if [ $OPTIND -le 1 ]; then
-    echo -e "\n${RED}[!][!][!]  You must enter an option  [!][!][!]${ENDCOLOR}\n" >&2
+    echo -e "\n${BLUE}[!][!][!]  You must enter an option  [!][!][!]${ENDCOLOR}\n" >&2
     print_help_menu
 fi
 
