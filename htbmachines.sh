@@ -15,6 +15,14 @@ ENDCOLOR='\033[0m'
 file="bundle.js"
 old_file="bundle.js.old"
 
+# Control variables
+check_os=1
+check_difficulty=1
+
+# search_os & search_difficulty $OPTARG
+os_optarg=""
+difficulty_optarg=""
+
 handleError() {
     echo -e "\n${RED}[!]Error on line: $1  command:$2${ENDCOLOR}\n" >&2
     exit 1
@@ -125,7 +133,6 @@ search_difficulty() {
     difficulty="$1"
     find_difficulty="$(grep -i "dificultad: \"$difficulty\"" -B 5 bundle.js | grep -vE 'id:|sku:|ip:|so:|resuelta:|lf.push|dificultad:' | awk '{print $2}' | tr '",' ' ' | sort | column -c "$(tput cols)" -x)"
 
-
     if [ ! "${find_difficulty}" ]; then
         echo -e "\n\t${RED}[!][!][!]  There are no machines of${ENDCOLOR} \"$difficulty\" difficulty  [!][!][!]${ENDCOLOR}\n" >&2
         print_help_menu
@@ -165,6 +172,22 @@ search_link() {
     return 0
 }
 
+search_combined_options() {
+    if [ $check_os -eq 0 ] && [ $check_difficulty -eq 0 ]; then
+        echo -e "\nProbando uso combinado"
+
+    elif [ $check_os -eq 0 ] && [ $check_difficulty -eq 1 ]; then    
+        if ! search_os "$os_optarg"; then
+            exit 1
+        fi
+
+    elif [ $check_difficulty -eq 0 ] && [ $check_os -eq 1 ]; then
+        if  ! search_difficulty "$difficulty_optarg"; then
+            exit 1
+        fi
+    fi
+}
+
 OPTIND=1;
 while getopts ":hun:i:o:d:s:y:" opt; do
     case ${opt} in
@@ -186,11 +209,12 @@ while getopts ":hun:i:o:d:s:y:" opt; do
             search_ip "$OPTARG"
             ;;
         o)
-            search_os "$OPTARG"
-
+            check_os=0
+            os_optarg="$OPTARG"
             ;;
         d)
-            search_difficulty "$OPTARG"
+            check_difficulty=0
+            difficulty_optarg="$OPTARG"
             ;;
         s)
             search_skill "$OPTARG"
@@ -211,6 +235,9 @@ while getopts ":hun:i:o:d:s:y:" opt; do
     esac
 done
 
+# Options -o and -d or -d and -o combined
+search_combined_options
+
 # to handle arguments safely with $1, $n, etc.
 shift $((OPTIND-1))
 
@@ -225,4 +252,4 @@ if [ $# -ge 1 ]; then
     echo -e "\n${RED}[!][!][!]  Unexpected arguments: $*  [!][!][!]${ENDCOLOR}\n" >&2
 fi
 
-unset $file $old_file
+unset $file $old_file $check_os $check_difficulty "$os_optarg" "$difficulty_optarg"
