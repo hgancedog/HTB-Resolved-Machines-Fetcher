@@ -23,12 +23,14 @@ bash
 ./htb_machine_fetcher.sh -u
 
 ## Search by Machine Name
-./htb_machine_fetcher.sh -m <machine_name>
+./htb_machine_fetcher.sh -n <machine_name>
 
 ## Search by IP Address
 ./htb_machine_fetcher.sh -i <ip_address>
 
 ## Search by Difficulty
+Please enter the difficulty in Spanish, including the acute accent symbol (Fácil=Easy, Media=Medium, Difícil=Hard, Insane=Insane)
+
 ./htb_machine_fetcher.sh -d <difficulty>
 
 ## Search by Operating System

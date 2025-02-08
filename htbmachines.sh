@@ -25,7 +25,7 @@ trap 'handleError $LINENO $BASH_COMMAND' ERR
 print_help_menu() {
     echo -e "\n\t${YELLOW}[+]${ENDCOLOR}${GRAY} Please, select an option:"
     echo -e "\t\tu) Dowload Or Update Files"
-    echo -e "\t\tm) Search By Machine Name"
+    echo -e "\t\tn) Search By Machine Name"
     echo -e "\t\ti) Search By IP address"
     echo -e "\t\to) Search By Operating System"
     echo -e "\t\td) Search By Difficulty"
@@ -57,10 +57,10 @@ update_files() {
     echo -e "\n${MAGENTA}Old File Hash:${ENDCOLOR} ${old_hash}"
 
     if [ "${old_hash}" != "${hash}" ]; then
-        echo -e "\n${WHITE}[+][+][+]  Files has been updated  [+][+][+]\n${ENDCOLOR}"
+        echo -e "\n${WHITE}[+][+][+]  Files has been updated  [+][+][+]${ENDCOLOR}\n"
         rm -f "${old_file}"
     else
-        echo -e "\n${CYAN}[+][+][+]  Files are already up to date  [+][+][+]\n${ENDCOLOR}"
+        echo -e "\n${CYAN}[+][+][+]  Files are already up to date  [+][+][+]${ENDCOLOR}\n"
         rm -f "${old_file}"
     fi
 
@@ -70,7 +70,7 @@ update_files() {
 check_files() {
     if [ ! -f bundle.js ]; then
         download_files
-        echo -e "\n${WHITE}[+][+][+]  Files downloaded!!!  [+][+][+]\n${ENDCOLOR}"
+        echo -e "\n${WHITE}[+][+][+]  Files downloaded!!!  [+][+][+]${ENDCOLOR}\n"
     else
         mv "${file}" "${old_file}"
         download_files
@@ -79,13 +79,14 @@ check_files() {
     return 0
 }
 
-search_machine_name() {
-    machine_name="name: \"$1\""
-    find_machine="$(grep -i "${machine_name}" -A 8 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:' | sed 's/^[ \t]*//' | fmt -t | awk '{print "\t" $0}' | sed '/,$/s/,$//')"
+search_name() {
+    name="$1"
+    find_machine="$(grep -i "name: \"$name\"" -A 10 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:|lf.push' | sed 's/^[ \t]*//' | fmt -t | awk '{print "\t" $0}' | sed '/,$/s/,$//')"
 
     if [ ! "${find_machine}" ]; then
-        echo -e "\n\t${RED}[!][!][!]  Machine $1 doesn´t exists in the database  [!][!][!]\n" >&2
+        echo -e "\n\t${RED}[!][!][!]  Machine name${ENDCOLOR} \"$name\" ${RED}doesn´t exists in the database  [!][!][!]${ENDCOLOR}\n" >&2
         print_help_menu
+        exit 1
     fi
 
     echo -e "\n${find_machine}\n"
@@ -93,66 +94,93 @@ search_machine_name() {
 }
 
 search_ip() {
-    ip="ip: \"$1\""
-    find_ip="$(grep "${ip}" -B 3 -A 7 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|--|\}\), lf\.push\(\{' | sed 's/^[ \t]*//' | sed '/,$/s/,$//'| fmt -t | awk '{print "\t" $0}')"
+    ip="$1"
+    find_ip="$(grep "ip: \"${ip}\"" -B 3 bundle.js | grep -vE 'ip:|id:|sku:' | awk '{print $2}' | tr '",' ' ' | sed 's/^ //')"
 
     if [ ! "${find_ip}" ]; then
-        echo -e "\n\t${RED}[!][!][!]  IP $1 doesn´t exists in the database  [!][!][!]\n" >&2
+        echo -e "\n\t${RED}[!][!][!]  IP${ENDCOLOR} \"${ip}\" ${RED}doesn´t exists in the database  [!][!][!]${ENDCOLOR}\n" >&2
         print_help_menu
+        exit 1
     fi
 
-    echo -e "\n${find_ip}\n"
+    echo -e "\n${BLUE}The machine with IP $ip is:${ENDCOLOR} ${find_ip}\n"
     return 0
 }
 
 search_os() {
-    os="so: \"$1\""
-    find_os="$(grep -i "${os}" -B 4 -A 5 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:|\}\), lf\.push\(\{' | sed 's/^[ \t]*//' | sed '/,$/s/,$//' | fmt -t | awk '{print "\t" $0}')"
+    os="$1"
+    find_os="$(grep -i "so: \"$os\"" -B 4 bundle.js | grep -vE 'id:|sku:|ip:|so:|resuelta:|lf.push' | awk '{print $2}' | tr ',"--' ' ' | sort | column -c "$(tput cols)" -x)"
 
     if [ ! "${find_os}" ]; then
-        echo -e "\n\t${RED}[!][!][!]  OS $1 doesn´t exists in the database  [!][!][!]\n" >&2
+        echo -e "\n\t${RED}[!][!][!]  OS${ENDCOLOR} \"${os}\"${RED} doesn´t exists in the database  [!][!][!]${ENDCOLOR}\n" >&2
         print_help_menu
+        exit 1
     fi
 
-    echo -e "\n${find_os}\n"
+    echo -e "\n${BLUE}Displaying results for OS${ENDCOLOR} (${os^})\n\n${find_os}\n"
     return 0
 }
 
 search_difficulty() {
-    difficulty="dificultad: \"$1\""
-    find_difficulty="$(grep -i "${difficulty}" -B 5 -A 5 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:|\}\), lf\.push\(\{' | sed 's/^[ \t]*//' | sed '/,$/s/,$//' | fmt -t | awk '{print "\t" $0}')"
+    difficulty="$1"
+    find_difficulty="$(grep -i "dificultad: \"$difficulty\"" -B 5 bundle.js | grep -vE 'id:|sku:|ip:|so:|resuelta:|lf.push|dificultad:' | awk '{print $2}' | tr '",' ' ' | sort | column -c "$(tput cols)" -x)"
+
 
     if [ ! "${find_difficulty}" ]; then
-        echo -e "\n\t${RED}[!][!][!]  There are no machines of $1 difficulty  [!][!][!]\n" >&2
+        echo -e "\n\t${RED}[!][!][!]  There are no machines of${ENDCOLOR} \"$difficulty\" difficulty  [!][!][!]${ENDCOLOR}\n" >&2
         print_help_menu
+        exit 1
     fi
 
-    echo -e "\n${find_difficulty}\n"
+    echo -e "\n${BLUE}Displaying results for difficulty${ENDCOLOR} (${difficulty^})\n\n${find_difficulty}\n"
     return 0
 }
 
 search_skill() {
     skill="$1"
-    echo -e "\n probando search_skill ${skill}"
+    find_skill="$(grep -i "skills: " -B 6 bundle.js | grep -i "$skill" -B 6 | grep 'name:' | awk '{print $2}' | tr '",' ' ' | sort | column -c "$(tput cols)" -x)"
+
+
+    if [ ! "${find_skill}" ]; then
+        echo -e "\n\t${RED}[!][!][!]  Skill${ENDCOLOR} \"$skill\" ${RED}not found in the database  [!][!][!]${ENDCOLOR}\n" >&2
+        print_help_menu
+        exit 1
+    fi
+
+    echo -e "\n${BLUE}Displaying results for skill${ENDCOLOR} (${skill^})\n\n${find_skill}\n"
+    return 0
+}
+
+search_link() {
+    name="$1" 
+    find_link="$(grep -i "name: \"$name\"" -A 10 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:|lf.push' | sed 's/^[ \t]*//' | grep 'youtube:' | sed '/,$/s/,$//' | tr '"' ' ' | awk '{print $2}')"
+
+    if [ ! "${find_link}" ]; then
+        echo -e "\n\t${RED}[!][!][!]  Machine ${name} doesn´t exists in the database  [!][!][!]${ENDCOLOR}\n" >&2
+        print_help_menu
+        exit 1
+    fi
+
+    echo -e "\n${BLUE}The resolution for the machine${ENDCOLOR} ${name^} ${BLUE}is in the following link:${ENDCOLOR} ${find_link}\n"
+    return 0
 }
 
 OPTIND=1;
-while getopts ":hum:i:o:d:s:" opt; do
+while getopts ":hun:i:o:d:s:y:" opt; do
     case ${opt} in
         h)
             print_help_menu
 
-            if [ $OPTIND -ge 2 ] ; then
-                echo -e "\n    Otra forma de imprimir argumentos no esperados: ${!OPTIND}"
+            if [ $OPTIND -gt 2 ] ; then
+                echo -e "\n${MAGENTA}[!][!][!]  Unexpected arguments: ${!OPTIND} in option -${opt} [!][!][!]${ENDCOLOR}\n" >&2
                 shift $((OPTIND-1))
-                echo -e "\n${MAGENTA}[!][!][!]  Unexpected arguments: $* in option -${opt} [!][!][!]${ENDCOLOR}\n" >&2
             fi
             ;;
         u)
             check_files
             ;;
-        m)
-            search_machine_name "$OPTARG"
+        n)
+            search_name "$OPTARG"
             ;;
         i)
             search_ip "$OPTARG"
@@ -167,6 +195,9 @@ while getopts ":hum:i:o:d:s:" opt; do
         s)
             search_skill "$OPTARG"
             ;;
+        y)
+            search_link "$OPTARG"
+            ;;
         :)
             echo -e "\n${RED}[!][!][!]  Option -${OPTARG} require an argument  [!][!][!]${ENDCOLOR}\n" >&2
             print_help_menu
@@ -180,13 +211,14 @@ while getopts ":hum:i:o:d:s:" opt; do
     esac
 done
 
-if [ $OPTIND -le 1 ]; then
+# to handle arguments safely with $1, $n, etc.
+shift $((OPTIND-1))
+
+if [ $OPTIND -eq 1 ]; then
     echo -e "\n${BLUE}[!][!][!]  You must enter an option  [!][!][!]${ENDCOLOR}\n" >&2
     print_help_menu
 fi
 
-# to handle arguments safely with $1, $n, etc.
-shift $((OPTIND-1))
 
 # function for handling unknown arguments. At this point $1, $n are arguments
 if [ $# -ge 1 ]; then
