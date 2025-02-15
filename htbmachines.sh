@@ -20,6 +20,9 @@ old_file="bundle.js.old"
 os_optarg=""
 difficulty_optarg=""
 
+os_length_args=0
+difficulty_length_args=0
+
 # For error tracking purposes
 print_call_stack() {
     local frame=0
@@ -131,7 +134,6 @@ search_ip() {
 
 search_os() {
     local os="$1"
-    local suppress_help_menu="$2"
     local find_os=""
     find_os="$(grep -i "so: \"$os\"" -B 4 bundle.js | grep -vE 'id:|sku:|ip:|so:|resuelta:|lf.push' | awk '{print $2}' | tr ',"--' ' ' | sort | column -c "$(tput cols)" -x)"
 
@@ -189,19 +191,25 @@ search_link() {
     return 0
 }
 
+
+# Function that search results for options -o and -d combined.
+#
+# Parameters:
+#   $1 - -o $OPTARG (Operating System)
+#   $2 - -d $OPTARG (Difficulty)
+# Return:
+#   0 - Success: print results
+#   1 - Error : print no results message
 search_os_difficulty() {
     local os="$1"
     local difficulty="$2"
-    local os_return_code
-    local difficulty_return_code
-
     local find_os_difficulty=""
 
     search_os "$os" &>/dev/null
-    os_return_code=$?
+    local os_return_code=$?
 
     search_difficulty "$difficulty" &>/dev/null
-    difficulty_return_code=$?
+    local difficulty_return_code=$?
 
     if [ "$os_return_code" -eq 0 ] && [ "$difficulty_return_code" -eq 0 ]; then
         find_os_difficulty="$(grep -i "so: \"$os\"" -C 5 bundle.js | grep -i "dificultad: \"$difficulty\"" -B 5 | grep "name: " | awk '{print $2}' | tr '",' ' ' | sort | column -c "$(tput cols)" -x)"
@@ -209,73 +217,54 @@ search_os_difficulty() {
         echo -e "\n$find_os_difficulty\n"
         return 0
     else
+        echo -e "\n\t${RED}[!][!][!] There are no matches for OS${ENDCOLOR} ${os} ${RED}and difficulty${ENDCOLOR} $difficulty  ${RED}[!][!][!]${ENDCOLOR}\n" >&2
         return 1
     fi
-
-    # elif [ "$os_return_code" -eq 0 ] && [ "$difficulty_return_code" -eq 1 ] ; then
-    #     search_os "$os"
-    #     search_difficulty "$difficulty"
-    #     print_help_menu
-    #     return 1
-    #
-    # elif [ "$os_return_code" -eq 1 ] && [ "$difficulty_return_code" -eq 0 ]; then
-    #     search_difficulty "$difficulty"
-    #     search_os "$os"
-    #     print_help_menu
-    #     return 1
-    #
-    # else
-    #     search_os "$os"
-    #     search_difficulty "$difficulty"
-    #     print_help_menu
-    #     return 1
-    #
-    # fi
 }
 
+# Function that controls the logic when -d and -o options are selected, individually or combined. 
+#
+# Global variables:
+#   $os_optarg: -o option arguments
+#   $difficulty_optarg: -d option arguments
+#
+# Return:
+#   0 - Success: matches found
+#   1 - Error : no matches found or invalid arguments
+#
 search_combined_options() {
-    # Options -o & -d selected
+
+    # Options -o and -d selected
     if [ -n "$os_optarg" ] && [ -n "$difficulty_optarg" ]; then
 
-        search_os_difficulty "$os_optarg" "$difficulty_optarg" &>/dev/null
-        os_difficulty_return_code=$?
-
-        if [ $os_difficulty_return_code -ne 0 ]; then
-            print_help_menu
-                        return 1 
-        fi
-
-        search_os_difficulty "$os_optarg" "$difficulty_optarg"
-        return 0
+        search_os_difficulty "$os_optarg" "$difficulty_optarg" || { print_help_menu; return 1;}
 
     # Option -o selected
     elif [ -n "$os_optarg" ] && [ -z "$difficulty_optarg" ]; then
 
-        if  ! search_os "$os_optarg"; then
-            print_help_menu
-            return 1
-        fi
-
-        return 0
+        search_os "$os_optarg" || { print_help_menu; return 1; }
 
     # Option -d selected
     elif [ -n "$difficulty_optarg" ] && [ -z "$os_optarg" ]; then
 
-        if  ! search_difficulty "$difficulty_optarg"; then
-            print_help_menu
-            return 1
-        fi
-
-        return 0
+        search_difficulty "$difficulty_optarg" || { print_help_menu; return 1; }
 
     else
-        return 0
+        return 1
     fi
 }
 
-
+# Description: Check if an option has exactly one argument. If the option has more than one is considered an error,
+#
+# Parameters:
+#   $1 - Option selected (e.g., -n).
+#   $2 - Length of arguments provided for the option.
+#   #
+# Return:
+#   0 - Success: the option has exactly one argument.
+#   1 - Error: the option has more than one argument (not allowed).
+#
 check_options() {
-
     option=$1
     check_args=$(($2-1))
 
@@ -283,6 +272,8 @@ check_options() {
         echo -e "\n\t${MAGENTA}Option${ENDCOLOR} -$option ${MAGENTA}allows only one argument${ENDCOLOR}"
         return 1
     fi
+
+    return 0
 }
 
 OPTIND=1;
@@ -324,16 +315,9 @@ while getopts ":hun:i:o:d:s:y:" opt; do
             ;;
         o)
             os_optarg="$OPTARG"
-            # os_length_args="$#"
-            #
-            # if ! search_combined_options "$os_optarg" "$os_length_args"; then
-            #     return 1
-            # fi
             ;;
         d)
             difficulty_optarg="$OPTARG"
-            # difficulty_length_args="$#"
-            # search_combined_options "$difficulty_optarg" "$difficulty_length_args"
             ;;
         s)
             if ! check_options "$opt" $#; then
@@ -373,14 +357,13 @@ if [ $OPTIND -eq 1 ]; then
 fi
 
 # Options -o and -d or -d and -o combined
-search_combined_options
+search_combined_options || exit 1
 
 # to handle arguments safely with $1, $n, etc.
 shift $((OPTIND-1))
 
-# COMPROBAR PUEDE NO SER NECESARIO YA QUE check_options() comprueba el numero de args, solo queda comprobar -o y -d combinadas
 # function for handling unknown arguments. At this point $1, $n are arguments
-if [ $# -gt 1 ]; then
+if [ $# -gt 0 ]; then
     echo -e "\n${RED}[!][!][!]  Unexpected arguments: $*  [!][!][!]${ENDCOLOR}\n" >&2
 fi
 
