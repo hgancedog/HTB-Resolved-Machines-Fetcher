@@ -20,28 +20,19 @@ old_file="bundle.js.old"
 os_optarg=""
 difficulty_optarg=""
 
-os_length_args=0
-difficulty_length_args=0
-
-# For error tracking purposes
-print_call_stack() {
-    local frame=0
-
-    while caller $frame &>/dev/null; do
-        echo -e "\nLevel $frame:  (Function=> ${FUNCNAME[$frame]}) (Line=> $(caller $frame | awk '{print $1}'))\n"
-        ((frame++))
-    done
-}
-
-
-# For error tracking
+# Function to handle and display error information
 handleError() {
     echo -e "\n${RED}[!]Error on line: $1  command:$2${ENDCOLOR}\n" >&2
-    print_call_stack
+
+    echo -e "\nDisplaying the ERROR call stack:\n"
+    for((i=0; i<${#FUNCNAME[@]}; i++)); do
+        echo -e "\n(Level[$i])  Line: ${BASH_LINENO[$i]} Function: ${FUNCNAME[$i]}"
+    done
+
     exit 1
 }
 
-# Enable only for debugging
+# Set up error trap to catch and handle any errors during script execution
 trap 'handleError $LINENO $BASH_COMMAND' ERR
 
 print_help_menu() {
@@ -67,10 +58,23 @@ download_files() {
         return 1
     fi
 
+    echo -e "\n${WHITE}[+][+][+]  Files downloaded!!!  [+][+][+]${ENDCOLOR}\n"
     js-beautify "${file}" | sponge "${file}"
     return 0
 }
 
+# Description: A function that calculates the has of the new and old versions of bundle.js to compare them and 
+#            update if necessary. It prints the hash of these files to stdout as well.
+#
+# Global variables:
+#   $file - bundle.js
+#   $old_file - bundle.js.old
+# Example:
+#   ./script.sh -u
+# Returns:
+#   0 - Success: files updated or already up to date.
+#   1 - Error: some operation fails.
+#
 update_files() {
     local hash=""
     local old_hash=""
@@ -83,34 +87,57 @@ update_files() {
 
     if [ "${old_hash}" != "${hash}" ]; then
         echo -e "\n${WHITE}[+][+][+]  Files has been updated  [+][+][+]${ENDCOLOR}\n"
-        rm -f "${old_file}"
+        rm -f "${old_file}" || return 1
+        return 0
     else
         echo -e "\n${CYAN}[+][+][+]  Files are already up to date  [+][+][+]${ENDCOLOR}\n"
-        rm -f "${old_file}"
+        rm -f "${old_file}" || return 1
+        return 0
     fi
 
-    return 0
+    return 1
 }
 
+# Description: 
+#   Checks if the file bundle.js exists. If not, attempts to download it. If it exists, tries to rename it, downloads a new version of the same file,
+#   and checks if it is updated to update it if necessary.
+#
+# Example:
+#   ./script.sh -n Jewel
+# Returns:
+#   0 - Success: The operation of downloading, renaming, or updating the file was successful. Note that these operations can be successful separately
+#               but are executed sequentially. If renaming (mv) fails, subsequent operations will not be performed. If renaming succeeds, the following 
+#               operations may or may not succeed individually or collectively.
+#   1 - Error: An error occurred during any of these operations.
+#
 check_files() {
     if [ ! -f bundle.js ]; then
-        download_files
-        echo -e "\n${WHITE}[+][+][+]  Files downloaded!!!  [+][+][+]${ENDCOLOR}\n"
+        download_files || return 1
     else
-        mv "${file}" "${old_file}"
-        download_files
-        update_files
+        mv "${file}" "${old_file}" || return 1
+        download_files || return 1
+        update_files || return 1
     fi
-    return 0
 }
 
+# Description: Searches for a machine name based on the '-n' option followed by a valid machine name.
+#
+# Parameter:
+#   $1 - The value of the '-n' option (machine name).
+# Example:
+#   ./script.sh -n Jewel
+# Returns:
+#   0 - Success: Prints the results.
+#   1 - Error: Prints a message indicating no results.
+#
 search_name() {
     local name="$1"
     local find_name=""
     find_name="$(grep -i "name: \"$name\"" -A 10 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:|lf.push' | sed 's/^[ \t]*//' | fmt -t | awk '{print "\t" $0}' | sed '/,$/s/,$//')"
 
-    if [ -z "${find_name}" ]; then
-        echo -e "\n\t${RED}[!][!][!]  Machine name${ENDCOLOR} \"$name\" ${RED}doesn´t exists in the database  [!][!][!]${ENDCOLOR}\n" >&2 2>/dev/null
+    if [ ! "${find_name}" ]; then
+        echo -e "\n\t${RED}[!][!][!]  Machine name${ENDCOLOR} \"$name\" ${RED}doesn´t exists in the database  [!][!][!]${ENDCOLOR}\n" >&2
+        print_help_menu
         return 1
     fi
 
@@ -118,13 +145,33 @@ search_name() {
     return 0
 }
 
+# Description: Searches for an IP address based on the '-i' option followed by a valid IP address in the format (255.255.255.255).
+#
+# Parameter:
+#   $1 - The value of the '-i' option (IP address).
+# Example:
+#   ./script.sh -i 10.10.10.29
+# Returns:
+#   0 - Success: Prints the result.
+#   1 - Error: Prints a message indicating an invalid address or no result.
+#
 search_ip() {
     local ip="$1"
-    local find_ip=""
-    find_ip="$(grep "ip: \"${ip}\"" -B 3 bundle.js | grep -vE 'ip:|id:|sku:|lf.push|!0' | awk '{print $2}' | tr '",' ' ' | sed 's/^ //')"
+    local ip_regex="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
 
-    if [ -z "${find_ip}" ]; then
+    if ! echo $ip | grep -Eq "$ip_regex"; then
+        echo -e "\n${RED}[!][!][!]  The IP address${ENDCOLOR} $ip ${RED}is not valid. Insert an address in a format such as${ENDCOLOR} 255.255.255.255 ${RED}[!][!][!]${ENDCOLOR}\n"
+        return 1
+    fi
+
+    local find_ip=""
+
+    find_ip="$(grep "ip: \"${ip}\"" -B 3 bundle.js | grep -vE 'ip:|id:|sku:|lf.push|!0' | awk '{print $2}' | tr '",' ' ' | sed 's/^ //')"
+    local find_ip_return_code=$?
+
+    if [ $find_ip_return_code -ne 0 ]; then
         echo -e "\n\t${RED}[!][!][!]  IP${ENDCOLOR} \"${ip}\" ${RED}doesn´t exists in the database  [!][!][!]${ENDCOLOR}\n" >&2
+        print_help_menu
         return 1
     fi
 
@@ -132,6 +179,16 @@ search_ip() {
     return 0
 }
 
+# Description: Searches for Operating System based on the '-o' option followed by an operating system name.
+#
+# Parameter:
+#   $1 - The value of the '-o' option (operating system name).
+# Example:
+#   ./script.sh -o Linux
+# Returns:
+#   0 - Success: Prints the results.
+#   1 - Error: Prints a message indicating no results.
+#
 search_os() {
     local os="$1"
     local find_os=""
@@ -146,6 +203,21 @@ search_os() {
     return 0
 }
 
+# Description: Searches for difficulty based on the '-d' option followed by a difficulty level.
+#
+# Parameter:
+#   $1 - The value of the -d option (Difficulty).
+#         Difficulty values should be written in Spanish with accents where applicable:
+#         - fácil (easy)
+#         - medio (medium)
+#         - difícil (hard)
+#         - insane (same)
+# Example:
+#   ./script.sh -d fácil
+# Returns:
+#   0 - Success: Prints the results.
+#   1 - Error: Prints a message indicating no results.
+#
 search_difficulty() {
     local difficulty="$1"
     local find_difficulty=""
@@ -161,6 +233,19 @@ search_difficulty() {
     return 0
 }
 
+# Description: Searches for skills based on the '-s' option followed by a valid skill name.
+#
+# Parameter:
+#   $1 - The value of the -s option (skill name).
+#         If the skill name consists of multiple words (e.g., "Remote Code Execution"),
+#         it should be enclosed in quotes. For single words, quotes are optional.
+# Example:
+#   ./script.sh -s "Python"
+#   ./script.sh -s "Remote Code Execution"
+# Returns:
+#   0 - Success: Prints the results.
+#   1 - Error: Prints a message indicating no results.
+#
 search_skill() {
     local skill="$1"
     local find_skill=""
@@ -176,6 +261,16 @@ search_skill() {
     return 0
 }
 
+# Description: Searches for the YouTube link based on the '-y' option followed by a valid machine name.
+#
+# Parameter:
+#   $1 - The value of the -y option (YouTube link).
+# Example:
+#   ./script.sh -y Bounty
+# Returns:
+#   0 - Success: Prints the result.
+#   1 - Error: Prints a message indicating no result.
+#
 search_link() {
     local name="$1"
     local find_link=""
@@ -191,15 +286,22 @@ search_link() {
     return 0
 }
 
-
-# Function that search results for options -o and -d combined.
+# Description: Searches for results based on the combined options '-o' (Operating System) and '-d' (Difficulty).
 #
 # Parameters:
-#   $1 - -o $OPTARG (Operating System)
-#   $2 - -d $OPTARG (Difficulty)
-# Return:
-#   0 - Success: print results
-#   1 - Error : print no results message
+#   $1 - The value of the -o option (Operating System).
+#   $2 - The value of the -d option (Difficulty).
+#         Difficulty values should be written in Spanish with accents where applicable:
+#         - fácil (easy)
+#         - medio (medium)
+#         - difícil (hard)
+#         - insane (same)
+# Example:
+#   ./script.sh -o Windows -d fácil
+# Returns:
+#   0 - Success: Prints the results.
+#   1 - Error: Prints a message indicating no results.
+#
 search_os_difficulty() {
     local os="$1"
     local difficulty="$2"
@@ -217,12 +319,12 @@ search_os_difficulty() {
         echo -e "\n$find_os_difficulty\n"
         return 0
     else
-        echo -e "\n\t${RED}[!][!][!] There are no matches for OS${ENDCOLOR} ${os} ${RED}and difficulty${ENDCOLOR} $difficulty  ${RED}[!][!][!]${ENDCOLOR}\n" >&2
+        echo -e "\n\t${RED}[!][!][!] There are no matches for OS${ENDCOLOR} ${os} ${RED}and difficulty${ENDCOLOR} $difficulty ${RED}[!][!][!]${ENDCOLOR}\n" >&2
         return 1
     fi
 }
 
-# Function that controls the logic when -d and -o options are selected, individually or combined. 
+# Description: Controls the logic when -d and -o options are selected, individually or combined.
 #
 # Global variables:
 #   $os_optarg: -o option arguments
@@ -301,7 +403,6 @@ while getopts ":hun:i:o:d:s:y:" opt; do
             fi
 
             search_name "$OPTARG"
-            exit 0
             ;;
         i)
             if ! check_options "$opt" $#; then
@@ -310,8 +411,7 @@ while getopts ":hun:i:o:d:s:y:" opt; do
             fi
 
             # comprobar formato direccion ip
-            search_ip "$OPTARG"   
-            exit 0
+            search_ip "$OPTARG" || exit 1
             ;;
         o)
             os_optarg="$OPTARG"
