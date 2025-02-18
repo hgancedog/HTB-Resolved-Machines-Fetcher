@@ -2,7 +2,7 @@
 
 # Enable strict mode and enhanced error handling
 set -eEuo pipefail
-#
+
 #Colors
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
