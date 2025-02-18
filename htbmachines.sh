@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Activate only for error debugging purposes
+# Enable strict mode and enhanced error handling
 set -eEuo pipefail
 #
 #Colors
@@ -17,10 +17,16 @@ ENDCOLOR='\033[0m'
 file="bundle.js"
 old_file="bundle.js.old"
 
+# Command-line argument variables
 os_optarg=""
 difficulty_optarg=""
 
-# Function to handle and display error information
+# Function to handle and display error information. Prints the error line, command, and call stack.
+#
+# Parameters:
+#   $1 - The line number where the error occurred.
+#   $2 - The command that caused the error.
+#
 handleError() {
     echo -e "\n${RED}[!]Error on line: $1  command:$2${ENDCOLOR}\n" >&2
 
@@ -32,9 +38,12 @@ handleError() {
     exit 1
 }
 
-# Set up error trap to catch and handle any errors during script execution
+# Sets up an error trap to catch and handle any errors during script execution
 trap 'handleError $LINENO $BASH_COMMAND' ERR
 
+
+# Description: Displays the options menu.
+#
 print_help_menu() {
     echo -e "\n\t${YELLOW}[+]${ENDCOLOR}${GRAY} Please, select an option:"
     echo -e "\t\tu) Dowload Or Update Files"
@@ -49,6 +58,15 @@ print_help_menu() {
     return 0
 }
 
+# Description: A function that downloads a file.
+#
+# Global variables:
+#   $file - bundle.js
+#   $old_file - bundle.js.old
+# Returns:
+#   0 - Success: files downloaded.
+#   1 - Error: some operation fails.
+#
 download_files() {
     url="https://htbmachines.github.io/bundle.js" 
 
@@ -63,7 +81,7 @@ download_files() {
     return 0
 }
 
-# Description: A function that calculates the has of the new and old versions of bundle.js to compare them and 
+# Description: A function that calculates the hash of the new and old versions of bundle.js to compare them and
 #            update if necessary. It prints the hash of these files to stdout as well.
 #
 # Global variables:
@@ -450,6 +468,7 @@ while getopts ":hun:i:o:d:s:y:" opt; do
     esac
 done
 
+# Check if no options were entered
 if [ $OPTIND -eq 1 ]; then
     echo -e "\n${BLUE}[!][!][!]  You must enter an option  [!][!][!]${ENDCOLOR}\n" >&2
     print_help_menu
@@ -459,10 +478,10 @@ fi
 # Options -o and -d or -d and -o combined
 search_combined_options || exit 1
 
-# to handle arguments safely with $1, $n, etc.
+# Move the index to process the remaining arguments safely with $1, $n, etc.
 shift $((OPTIND-1))
 
-# function for handling unknown arguments. At this point $1, $n are arguments
+# Handle unknown arguments. At this point $1, $n are arguments that have not been procesed.
 if [ $# -gt 0 ]; then
     echo -e "\n${RED}[!][!][!]  Unexpected arguments: $*  [!][!][!]${ENDCOLOR}\n" >&2
 fi

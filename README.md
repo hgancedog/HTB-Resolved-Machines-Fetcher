@@ -2,49 +2,77 @@
 An interactive bash script for fetching and managing data of resolved HackTheBox machines, inspired by S4vitar, a Spanish professional cybersecurity specialist. It maintains original menu options for coherence but features unique and original programming logic.
 
 ## Features
+- Download/Update Necessary Files
+- Search by Machine Name
+- Search by IP Address
+- Search by Difficulty
+- Search by Operating System
+- Search by Skill
+- Show YouTube Resolution Link
+- Help Panel
 
-- **Download/Update Necessary Files**: Download or update files containing the machine data.
-- **Search by Machine Name**: Search for information about a resolved machine by its name.
-- **Search by IP Address**: Find machines based on their IP address.
-- **Search by Difficulty**: Filter machines by their difficulty level.
-- **Search by Operating System**: Search for machines by their operating system.
-- **Search by Skill**: Filter machines by specific skills (e.g., SQLI, Buffer Overflow, XSS, etc.).
-- **Show YouTube Resolution Link**: Display the link to the machine's resolution on YouTube.
-- **Help Panel**: Show the help panel with the available options.
+## Requirements
+- Bash shell
+- curl (for downloading files)
+- grep, sed, awk (for text processing)
+
+## Getting Started
+1. Clone the repository
+
+2. Make the script executable:
+chmod +x htbmachines.sh
+
+3. Run the script to download the initial data:
+./htbmachines.sh -u
+
+Note: The repository includes a copy of bundle.js in case the download fails. Users can edit, remove, or add content to the bundle.js file to verify that when using the -u option, the file is correctly updated.
 
 ## Usage
 
-To run the script, make sure you have bash installed and execute the following command:
+## Additional Information
 
-bash
-./htb_machine_fetcher.sh
+After downloading the data file with `./htbmachines.sh -u`, you can use the following commands for testing and exploring the dataset:
+
+- List all machine names: `grep "name: " bundle.js`
+- List all IP addresses: `grep "ip: " bundle.js`
+- List all operating systems: `grep "so: " bundle.js`
+- List all difficulty levels: `grep "dificultad: " bundle.js`
+- List all skills: `grep "skills: " bundle.js`
+- List all YouTube links: `grep "link: " bundle.js`
+
+Note:
+- Machine names and operating system inputs are case-insensitive.
+- For single-word skills, quotes are not necessary. For multi-word skills, enclose the argument in quotes.
+
+Examples:
+./htbmachines.sh -s Enumeration
+./htbmachines.sh -s "Web Enumeration"
 
 ## Download/Update Files
-./htb_machine_fetcher.sh -u
+./htbmachines.sh -u
 
 ## Search by Machine Name
-./htb_machine_fetcher.sh -n <machine_name>
+./htbmachines.sh -n <machine_name>
 
 ## Search by IP Address
-./htb_machine_fetcher.sh -i <ip_address>
+./htbmachines.sh -i <ip_address>
 
 ## Search by Difficulty
 Please enter the difficulty in Spanish, including the acute accent symbol (Fácil=Easy, Media=Medium, Difícil=Hard, Insane=Insane)
 
-./htb_machine_fetcher.sh -d <difficulty>
+./htbmachines.sh -d <difficulty>
 
 ## Search by Operating System
-./htb_machine_fetcher.sh -o <operating_system>
+./htbmachines.sh -o <operating_system>
 
 ## Search by Skill
-./htb_machine_fetcher.sh -s <skill>
+./htbmachines.sh -s <skill>
 
 ## Show YouTube Resolution Link
-./htb_machine_fetcher.sh -y <machine_name>
+./htbmachines.sh -y <machine_name>
 
 ## Show Help Panel
-./htb_machine_fetcher.sh -h
+./htbmachines.sh -h
 
 ## Gratitude
-
 Special thanks to S4vitar for his guidance and inspiration. You can explore his amazing courses and content on https://hack4u.io/
