@@ -71,13 +71,18 @@ download_files() {
     url="https://htbmachines.github.io/bundle.js" 
 
     if ! curl -s -o "${file}" "${url}" &>/dev/null; then
-        rm -f "${file}";
         echo -e "\n${RED}[!]Error: download failed${ENDCOLOR}"
+        rm -f "${file}"
         return 1
     fi
 
     echo -e "\n${WHITE}[+][+][+]  Files downloaded!!!  [+][+][+]${ENDCOLOR}\n"
-    js-beautify "${file}" | sponge "${file}"
+
+   if ! js-beautify "${file}" | sponge "${file}"; then
+       echo "Error: Failed to apply js-beautify to the file '${file}'. Please check if the file exists and if js-beautify is installed correctly."
+       return 1
+   fi
+
     return 0
 }
 
@@ -112,8 +117,6 @@ update_files() {
         rm -f "${old_file}" || return 1
         return 0
     fi
-
-    return 1
 }
 
 # Description: 
@@ -148,7 +151,7 @@ check_files() {
 #   0 - Success: Prints the results.
 #   1 - Error: Prints a message indicating no results.
 #
-search_name() {
+search_n() {
     local name="$1"
     local find_name=""
     find_name="$(grep -i "name: \"$name\"" -A 10 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:|lf.push' | sed 's/^[ \t]*//' | fmt -t | awk '{print "\t" $0}' | sed '/,$/s/,$//')"
@@ -173,7 +176,7 @@ search_name() {
 #   0 - Success: Prints the result.
 #   1 - Error: Prints a message indicating an invalid address or no result.
 #
-search_ip() {
+search_i() {
     local ip="$1"
     local ip_regex="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
 
@@ -264,7 +267,7 @@ search_difficulty() {
 #   0 - Success: Prints the results.
 #   1 - Error: Prints a message indicating no results.
 #
-search_skill() {
+search_s() {
     local skill="$1"
     local find_skill=""
     find_skill="$(grep -i "skills: " -B 6 bundle.js | grep -i "$skill" -B 6 | grep 'name:'  | awk '{print $2}' | tr '",' ' ' | sort | column -c "$(tput cols)" -x)"
@@ -289,7 +292,7 @@ search_skill() {
 #   0 - Success: Prints the result.
 #   1 - Error: Prints a message indicating no result.
 #
-search_link() {
+search_y() {
     local name="$1"
     local find_link=""
     find_link="$(grep -i "name: \"$name\"" -A 10 bundle.js | grep -vE 'id:|sku:|like:|resuelta:|activeDirectory:|bufferOverFlow:|lf.push' | sed 's/^[ \t]*//' | grep 'youtube:' | sed '/,$/s/,$//' | tr '"' ' ' | awk '{print $2}')"
@@ -411,49 +414,24 @@ while getopts ":hun:i:o:d:s:y:" opt; do
             exit 0
             ;;
         u)
-            # comprobar si falla la descarga
             check_files
             ;;
-        n)
+
+        n|i|s|y)
+
             if ! check_options "$opt" $#; then 
                 print_help_menu
                 exit 1
             fi
 
-            search_name "$OPTARG"
-            ;;
-        i)
-            if ! check_options "$opt" $#; then
-                print_help_menu
-                exit 1
-            fi
-
-            # comprobar formato direccion ip
-            search_ip "$OPTARG" || exit 1
+            eval "search_$opt" "$OPTARG" || exit 1
+            exit 0
             ;;
         o)
             os_optarg="$OPTARG"
             ;;
         d)
             difficulty_optarg="$OPTARG"
-            ;;
-        s)
-            if ! check_options "$opt" $#; then
-                print_help_menu
-                exit 1
-            fi
-
-            search_skill "$OPTARG"
-            exit 0
-            ;;
-        y)
-            if ! check_options "$opt" $#; then 
-                print_help_menu
-                exit 1
-            fi
-
-            search_link "$OPTARG"
-            exit 0
             ;;
         :)
             echo -e "\n${RED}[!][!][!]  Option -${OPTARG} require an argument  [!][!][!]${ENDCOLOR}\n" >&2
