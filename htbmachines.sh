@@ -13,15 +13,8 @@ WHITE='\033[0;37m'
 GRAY='\e[0;37m'
 ENDCOLOR='\033[0m'
 
-# File-related variables
-file="bundle.js"
-old_file="bundle.js.old"
-
-# Command-line argument variables
-os_optarg=""
-difficulty_optarg=""
-
-# Function to handle and display error information. Prints the error line, command, and call stack.
+# Description:
+#   To handle and display error information. Prints the error line, command, and call stack.
 #
 # Parameters:
 #   $1 - The line number where the error occurred.
@@ -42,7 +35,8 @@ handleError() {
 trap 'handleError $LINENO $BASH_COMMAND' ERR
 
 
-# Description: Displays the options menu.
+# Description:
+#   Displays the options menu.
 #
 print_help_menu() {
     echo -e "\n\t${YELLOW}[+]${ENDCOLOR}${GRAY} Please, select an option:"
@@ -58,17 +52,21 @@ print_help_menu() {
     return 0
 }
 
-# Description: A function that downloads a file.
+# Description: 
+#   Downloads a file from a specified URL. If the download fails, the function removes any partially downloaded file.
+#   Additionally, if the download is successful, the function applies formatting using 'js-beautify' and updates the file.
 #
-# Global variables:
-#   $file - bundle.js
-#   $old_file - bundle.js.old
+# Local variables:
+#   file - The name of the file to be downloaded.
+#   url  - The URL from which the file is downloaded.
+#
 # Returns:
-#   0 - Success: files downloaded.
-#   1 - Error: some operation fails.
+#   0 - Success: The file was downloaded and formatted successfully.
+#   1 - Error: The download failed or formatting with 'js-beautify' was unsuccessful.
 #
 download_files() {
-    url="https://htbmachines.github.io/bundle.js" 
+    local file="bundle.js"
+    local  url="https://htbmachines.github.io/bundle.js" 
 
     if ! curl -s -o "${file}" "${url}" &>/dev/null; then
         echo -e "\n${RED}[!]Error: download failed${ENDCOLOR}"
@@ -78,20 +76,21 @@ download_files() {
 
     echo -e "\n${WHITE}[+][+][+]  Files downloaded!!!  [+][+][+]${ENDCOLOR}\n"
 
-   if ! js-beautify "${file}" | sponge "${file}"; then
-       echo "Error: Failed to apply js-beautify to the file '${file}'. Please check if the file exists and if js-beautify is installed correctly."
-       return 1
-   fi
+    if ! js-beautify "${file}" | sponge "${file}"; then
+        echo "Error: Failed to apply js-beautify to the file '${file}'. Please check if the file exists and if js-beautify is installed correctly."
+        return 1
+    fi
 
     return 0
 }
 
-# Description: A function that calculates the hash of the new and old versions of bundle.js to compare them and
-#            update if necessary. It prints the hash of these files to stdout as well.
+# Description:
+#   Calculates the hash of the new and old versions of bundle.js to compare them and
+#   update if necessary. It prints the hash of these files to stdout as well.
 #
-# Global variables:
-#   $file - bundle.js
-#   $old_file - bundle.js.old
+# Local variables:
+#   $file - the name of the file to download
+#   $old_file - old version of the file downloaded
 # Example:
 #   ./script.sh -u
 # Returns:
@@ -99,6 +98,8 @@ download_files() {
 #   1 - Error: some operation fails.
 #
 update_files() {
+    local file="bundle.js"
+    local old_file="bundle.js.old"
     local hash=""
     local old_hash=""
 
@@ -119,29 +120,9 @@ update_files() {
     fi
 }
 
-# Description: 
-#   Checks if the file bundle.js exists. If not, attempts to download it. If it exists, tries to rename it, downloads a new version of the same file,
-#   and checks if it is updated to update it if necessary.
-#
-# Example:
-#   ./script.sh -n Jewel
-# Returns:
-#   0 - Success: The operation of downloading, renaming, or updating the file was successful. Note that these operations can be successful separately
-#               but are executed sequentially. If renaming (mv) fails, subsequent operations will not be performed. If renaming succeeds, the following 
-#               operations may or may not succeed individually or collectively.
-#   1 - Error: An error occurred during any of these operations.
-#
-check_files() {
-    if [ ! -f bundle.js ]; then
-        download_files || return 1
-    else
-        mv "${file}" "${old_file}" || return 1
-        download_files || return 1
-        update_files || return 1
-    fi
-}
 
-# Description: Searches for a machine name based on the '-n' option followed by a valid machine name.
+# Description: 
+#   Searches for a machine name based on the '-n' option followed by a valid machine name.
 #
 # Parameter:
 #   $1 - The value of the '-n' option (machine name).
@@ -166,7 +147,8 @@ search_n() {
     return 0
 }
 
-# Description: Searches for an IP address based on the '-i' option followed by a valid IP address in the format (255.255.255.255).
+# Description: 
+#   Searches for an IP address based on the '-i' option followed by a valid IP address in the format (255.255.255.255).
 #
 # Parameter:
 #   $1 - The value of the '-i' option (IP address).
@@ -180,7 +162,7 @@ search_i() {
     local ip="$1"
     local ip_regex="^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
 
-    if ! echo $ip | grep -Eq "$ip_regex"; then
+    if ! echo "$ip" | grep -Eq "$ip_regex"; then
         echo -e "\n${RED}[!][!][!]  The IP address${ENDCOLOR} $ip ${RED}is not valid. Insert an address in a format such as${ENDCOLOR} 255.255.255.255 ${RED}[!][!][!]${ENDCOLOR}\n"
         return 1
     fi
@@ -200,7 +182,8 @@ search_i() {
     return 0
 }
 
-# Description: Searches for Operating System based on the '-o' option followed by an operating system name.
+# Description: 
+#   Searches for Operating System based on the '-o' option followed by an operating system name.
 #
 # Parameter:
 #   $1 - The value of the '-o' option (operating system name).
@@ -224,7 +207,8 @@ search_os() {
     return 0
 }
 
-# Description: Searches for difficulty based on the '-d' option followed by a difficulty level.
+# Description: 
+#   Searches for difficulty based on the '-d' option followed by a difficulty level.
 #
 # Parameter:
 #   $1 - The value of the -d option (Difficulty).
@@ -254,7 +238,8 @@ search_difficulty() {
     return 0
 }
 
-# Description: Searches for skills based on the '-s' option followed by a valid skill name.
+# Description: 
+#   Searches for skills based on the '-s' option followed by a valid skill name.
 #
 # Parameter:
 #   $1 - The value of the -s option (skill name).
@@ -282,7 +267,8 @@ search_s() {
     return 0
 }
 
-# Description: Searches for the YouTube link based on the '-y' option followed by a valid machine name.
+# Description: 
+#   Searches for the YouTube link based on the '-y' option followed by a valid machine name.
 #
 # Parameter:
 #   $1 - The value of the -y option (YouTube link).
@@ -307,7 +293,8 @@ search_y() {
     return 0
 }
 
-# Description: Searches for results based on the combined options '-o' (Operating System) and '-d' (Difficulty).
+# Description: 
+#   Searches for results based on the combined options '-o' (Operating System) and '-d' (Difficulty).
 #
 # Parameters:
 #   $1 - The value of the -o option (Operating System).
@@ -345,9 +332,10 @@ search_os_difficulty() {
     fi
 }
 
-# Description: Controls the logic when -d and -o options are selected, individually or combined.
+# Description: 
+#   Controls the logic when -d and -o options are selected, individually or combined.
 #
-# Global variables:
+# Local variables:
 #   $os_optarg: -o option arguments
 #   $difficulty_optarg: -d option arguments
 #
@@ -356,6 +344,8 @@ search_os_difficulty() {
 #   1 - Error : no matches found or invalid arguments
 #
 search_combined_options() {
+    local os_optarg="$1"
+    local difficulty_optarg="$2"
 
     # Options -o and -d selected
     if [ -n "$os_optarg" ] && [ -n "$difficulty_optarg" ]; then
@@ -377,7 +367,8 @@ search_combined_options() {
     fi
 }
 
-# Description: Check if an option has exactly one argument. If the option has more than one is considered an error,
+# Description: 
+#   Check if an option has exactly one argument. If the option has more than one is considered an error,
 #
 # Parameters:
 #   $1 - Option selected (e.g., -n).
@@ -399,69 +390,113 @@ check_options() {
     return 0
 }
 
-OPTIND=1;
-while getopts ":hun:i:o:d:s:y:" opt; do
-    case ${opt} in
-        h)
-            print_help_menu
+# Description: 
+#   Checks if the file bundle.js exists. If not, attempts to download it. If it exists, tries to rename it, downloads a new version of the same file,
+#   and checks if it is updated to update it if necessary.
+#
+# Local variables:
+#   $file - the name of the file to download
+#   $old_file - old version of the file downloaded
+#
+# Example:
+#   ./script.sh -n Jewel
+# Returns:
+#   0 - Success: The operation of downloading, renaming, or updating the file was successful. Note that these operations can be successful separately
+#               but are executed sequentially. If renaming (mv) fails, subsequent operations will not be performed. If renaming succeeds, the following 
+#               operations may or may not succeed individually or collectively.
+#   1 - Error: An error occurred during any of these operations.
+#
+check_files() {
+    local file="bundle.js"
+    local old_file="bundle.js.old"
+    
+    if [ ! -f "$file" ]; then
+        download_files || return 1
+    else
+        mv "${file}" "${old_file}" || return 1
+        download_files || return 1
+        update_files || return 1
+    fi
+}
 
-            if [ $# -ge 2 ] ; then
-                shift
-                echo -e "\n${MAGENTA}[!][!][!]  Unexpected arguments:${ENDCOLOR} $* ${MAGENTA}in option${ENDCOLOR} -${opt} ${MAGENTA}[!][!][!]${ENDCOLOR}\n" >&2
-                exit 1
-            fi
+# Description:
+#   Handles command-line arguments and controls the script's execution flow.
+#   It processes user-provided options using getopts, validates inputs, and calls 
+#   the corresponding functions based on the selected options. If an error occurs, 
+#   the script terminates with an appropriate exit status.
+#
+main() {
 
-            exit 0
-            ;;
-        u)
-            check_files
-            ;;
+    # Command-line argument variables
+    os_optarg=""
+    difficulty_optarg=""
 
-        n|i|s|y)
+    OPTIND=1;
 
-            if ! check_options "$opt" $#; then 
+    while getopts ":hun:i:o:d:s:y:" opt; do
+        case ${opt} in
+            h)
+                print_help_menu
+
+                if [ $# -ge 2 ] ; then
+                    shift
+                    echo -e "\n${MAGENTA}[!][!][!]  Unexpected arguments:${ENDCOLOR} $* ${MAGENTA}in option${ENDCOLOR} -${opt} ${MAGENTA}[!][!][!]${ENDCOLOR}\n" >&2
+                    exit 1
+                fi
+
+                exit 0
+                ;;
+            u)
+                check_files
+                ;;
+
+            n|i|s|y)
+
+                if ! check_options "$opt" $#; then 
+                    print_help_menu
+                    exit 1
+                fi
+
+                eval "search_$opt" "$OPTARG" || exit 1
+                exit 0
+                ;;
+            o)
+                os_optarg="$OPTARG"
+                ;;
+            d)
+                difficulty_optarg="$OPTARG"
+                ;;
+            :)
+                echo -e "\n${RED}[!][!][!]  Option -${OPTARG} require an argument  [!][!][!]${ENDCOLOR}\n" >&2
                 print_help_menu
                 exit 1
-            fi
+                ;;
+            \?)
+                echo -e "${RED}\n[!][!][!]  Unknown option selected. Please choose a valid option  [!][!][!]\n${ENDCOLOR}" >&2
+                print_help_menu
+                exit 1
+                ;;
+        esac
+    done
 
-            eval "search_$opt" "$OPTARG" || exit 1
-            exit 0
-            ;;
-        o)
-            os_optarg="$OPTARG"
-            ;;
-        d)
-            difficulty_optarg="$OPTARG"
-            ;;
-        :)
-            echo -e "\n${RED}[!][!][!]  Option -${OPTARG} require an argument  [!][!][!]${ENDCOLOR}\n" >&2
-            print_help_menu
-            exit 1
-            ;;
-        \?)
-            echo -e "${RED}\n[!][!][!]  Unknown option selected. Please choose a valid option  [!][!][!]\n${ENDCOLOR}" >&2
-            print_help_menu
-            exit 1
-            ;;
-    esac
-done
 
-# Check if no options were entered
-if [ $OPTIND -eq 1 ]; then
-    echo -e "\n${BLUE}[!][!][!]  You must enter an option  [!][!][!]${ENDCOLOR}\n" >&2
-    print_help_menu
-    exit 1
-fi
+    # Check if no options were entered
+    if [ $OPTIND -eq 1 ]; then
+        echo -e "\n${BLUE}[!][!][!]  You must enter an option  [!][!][!]${ENDCOLOR}\n" >&2
+        print_help_menu
+        exit 1
+    fi
 
-# Options -o and -d or -d and -o combined
-search_combined_options || exit 1
+    # Options -o and -d or -d and -o combined
+    search_combined_options "$os_optarg" "$difficulty_optarg" || exit 1
 
-# Move the index to process the remaining arguments safely with $1, $n, etc.
-shift $((OPTIND-1))
+    # Move the index to process the remaining arguments safely with $1, $n, etc.
+    shift $((OPTIND-1)) 
 
-# Handle unknown arguments. At this point $1, $n are arguments that have not been procesed.
-if [ $# -gt 0 ]; then
-    echo -e "\n${RED}[!][!][!]  Unexpected arguments: $*  [!][!][!]${ENDCOLOR}\n" >&2
-fi
+    # Handle unknown arguments. At this point $1, $n are arguments that have not been procesed.
+    if [ $# -gt 0 ]; then
+        echo -e "\n${RED}[!][!][!]  Unexpected arguments: $*  [!][!][!]${ENDCOLOR}\n" >&2
+    fi
+}
 
-unset $file $old_file "$os_optarg" "$difficulty_optarg"
+main "$@"
